@@ -1,0 +1,15 @@
+version: "3.4"
+
+services:
+
+  # redis
+  redis:
+    image: "redis:4-alpine"
+    restart: unless-stopped
+    expose:
+    - 6379
+    logging:
+      driver: syslog
+      options:
+        syslog-address: "udp://127.0.0.1:514"
+        tag: "docker/wynemo-redis"

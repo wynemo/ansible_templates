@@ -1,0 +1,14 @@
+/var/log/docker/*.log
+/var/log/docker/*/*.log
+/var/log/docker/*/*/*.log
+{
+        rotate 7
+        daily
+        missingok
+        notifempty
+        delaycompress
+        compress
+        postrotate
+                systemctl kill -s HUP rsyslog.service
+        endscript
+}

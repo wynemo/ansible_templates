@@ -1,0 +1,43 @@
+---
+- hosts: "{{ hosts }}"
+
+  tasks:
+  - name: Add rsyslog key
+    rpm_key:
+      state: present
+      key: http://rpms.adiscon.com/RPM-GPG-KEY-Adiscon
+
+  - name: Add rsyslog repository
+    shell: yum-config-manager --add-repo=http://rpms.adiscon.com/v8-stable/rsyslog.repo
+    args:
+      creates: /etc/yum.repos.d/rsyslog.repo
+
+  - name: install rsyslog
+    yum:
+      name: rsyslog
+      state: latest
+
+  - name: add rsyslog config
+    template:
+      src: 60-myfilter.conf
+      dest: /etc/rsyslog.d/60-myfilter.conf
+
+  - name: add log rotate config
+    template:
+      src: docker-logrotate
+      dest: /etc/logrotate.d/docker
+
+  - replace:
+      path: /etc/rsyslog.conf
+      regexp: '\#\$ModLoad imudp'
+      replace: '$ModLoad imudp'
+      backup: yes
+
+  - replace:
+      path: /etc/rsyslog.conf
+      regexp: '\#\$UDPServerRun 514'
+      replace: '$UDPServerRun 514'
+      backup: yes
+
+  - name: restart rsyslog
+    shell: "systemctl restart rsyslog.service"
