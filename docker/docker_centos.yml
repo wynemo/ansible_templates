@@ -1,0 +1,52 @@
+---
+- hosts: "{{ hosts }}"
+
+  tasks:
+
+    - name: install docker dependcy
+      yum:
+        name:
+          - yum-utils
+          - device-mapper-persistent-data
+          - lvm2
+        state: present
+
+    - name: Add CentOS_o repository
+      shell: yum-config-manager --add-repo=http://mirrors.aliyun.com/docker-ce/linux/centos/docker-ce.repo
+      args:
+        creates: /etc/yum.repos.d/docker-ce.repo
+
+    - name: install docker
+      yum:
+        name: docker-ce
+        state: present
+
+    - name: Add epel-release repo
+      yum:
+        name: epel-release
+        state: present
+
+    - name: install pip by yum
+      yum:
+        name: python-pip
+        state: present
+
+    - name: install docker-compose by pip
+      pip:
+        name: docker-compose==1.24.1
+
+
+    - name: disable firewalld
+      systemd:
+        name: firewalld.service
+        state: stopped
+        enabled: no
+
+
+    - name: add ip_forward
+      sysctl:
+        name: net.ipv4.ip_forward
+        value: 1
+        sysctl_set: yes
+        state: present
+        reload: yes

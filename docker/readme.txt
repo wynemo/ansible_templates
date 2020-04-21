@@ -1,0 +1,1 @@
+远程主机(centos7)需要删除firewalld, 关闭selinux并重启，配置好sshd让本地机器可以用ssh登陆
