@@ -1,0 +1,46 @@
+---
+- hosts: "{{ hosts }}"
+  become: true
+
+  environment:
+    http_proxy: "{{ http_proxy | default('') }}"
+    https_proxy: "{{ https_proxy | default('') }}"
+
+  tasks:
+
+    - name: Install required system packages
+      apt: name={{ item }} state=latest
+      loop: [ 'apt-transport-https', 'ca-certificates', 'curl', 'software-properties-common', 'gnupg-agent', 'python3-pip']
+
+    - name: Add Docker GPG apt Key
+      apt_key:
+        url: https://download.docker.com/linux/ubuntu/gpg
+        state: present
+
+    - name: Add Docker Repository
+      apt_repository:
+        repo: deb https://download.docker.com/linux/ubuntu bionic stable
+        state: present
+
+    - name: Update apt and install docker-ce
+      apt: name=docker-ce state=latest
+
+    - name: install python3-pip
+      apt: name=python3-pip state=latest
+
+    - name: install docker-compose by pip
+      pip:
+        executable: /usr/bin/pip3
+        name: docker-compose==1.24.1
+        extra_args: -i https://pypi.tuna.tsinghua.edu.cn/simple
+
+    - name: add docker config
+      template:
+        src: daemon.json
+        dest: /etc/docker/daemon.json
+
+    - name: realod docker
+      systemd:
+        name: docker.service
+        state: reloaded
+        enabled: yes
