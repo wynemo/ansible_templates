@@ -1,52 +1,94 @@
 ---
 - hosts: "{{ hosts }}"
+  vars:
+
+  environment:
+    http_proxy: "{{ http_proxy | default('') }}"
+    https_proxy: "{{ https_proxy | default('') }}"
 
   tasks:
+  - name: Update the /etc/ssh/sshd_config file
+    lineinfile:
+      dest: /etc/ssh/sshd_config
+      regexp: "^UseDNS"
+      line: "UseDNS no"
+      insertafter: EOF
+      state: present
 
-    - name: install docker dependcy
-      yum:
-        name:
-          - yum-utils
-          - device-mapper-persistent-data
-          - lvm2
-        state: present
+  - name: restart ssh
+    systemd:
+      name: sshd.service
+      state: restarted
+      enabled: yes
 
-    - name: Add CentOS_o repository
-      shell: yum-config-manager --add-repo=http://mirrors.aliyun.com/docker-ce/linux/centos/docker-ce.repo
-      args:
-        creates: /etc/yum.repos.d/docker-ce.repo
+  - name: install docker dependcy
+    yum:
+      name:
+        - yum-utils
+        - device-mapper-persistent-data
+        - lvm2
+      state: present
 
-    - name: install docker
-      yum:
-        name: docker-ce
-        state: present
+  - name: Add CentOS_o repository
+    shell: yum-config-manager --add-repo=http://mirrors.aliyun.com/docker-ce/linux/centos/docker-ce.repo
+    args:
+      creates: /etc/yum.repos.d/docker-ce.repo
 
-    - name: Add epel-release repo
-      yum:
-        name: epel-release
-        state: present
+  - name: install docker
+    yum:
+      name: docker-ce
+      state: present
 
-    - name: install pip by yum
-      yum:
-        name: python-pip
-        state: present
+  - name: Creates directory
+    file: path="{{ item }}" state=directory
+    with_items:
+      - "/data/172/docker"
+      - /etc/docker
 
-    - name: install docker-compose by pip
-      pip:
-        name: docker-compose==1.24.1
+  - name: add docker config
+    template:
+      src: daemon.json
+      dest: /etc/docker/daemon.json
+    register: docker_config
 
+  - name: realod docker
+    systemd:
+      name: docker.service
+      state: reloaded
+      enabled: yes
+    when: docker_config.changed
 
-    - name: disable firewalld
-      systemd:
-        name: firewalld.service
-        state: stopped
-        enabled: no
+  - name: Add epel-release repo
+    yum:
+      name: epel-release
+      state: present
 
+  - name: install pip by yum
+    yum:
+      name: python-pip
+      state: present
 
-    - name: add ip_forward
-      sysctl:
-        name: net.ipv4.ip_forward
-        value: 1
-        sysctl_set: yes
-        state: present
-        reload: yes
+  - name: install docker-compose by pip
+    pip:
+      name: docker-compose==1.24.1
+      extra_args: -i https://pypi.tuna.tsinghua.edu.cn/simple
+
+  - name: add ip_forward
+    sysctl:
+      name: net.ipv4.ip_forward
+      value: 1
+      sysctl_set: yes
+      state: present
+      reload: yes
+
+  - name: install rsync
+    yum:
+      name: rsync
+      state: present
+
+  - name: disable firewalld
+    systemd:
+      name: firewalld.service
+      state: stopped
+      enabled: no
+    ignore_errors: True
